@@ -5,12 +5,16 @@ description = ""
 authors = ["WolfEYc <wolfeycode@gmail.com>"]
 readme = "README.md"
 
+
 [tool.poetry.dependencies]
-python = "3.12"
+python = "^3.12"
 requests = "^2.31.0"
 polars = "^0.19.15"
 seaborn = "^0.13.0"
 locust = "^2.19.0"
+adbc-driver-postgresql = "^0.8.0"
+python-dotenv = "^1.0.0"
+pyarrow = "^14.0.1"
 
 
 [tool.poetry.group.dev.dependencies]

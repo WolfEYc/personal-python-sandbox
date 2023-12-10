@@ -1,0 +1,40 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/python
+{
+    "name": "Python 3",
+    // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "njpwerner.autodocstring",
+                "ms-toolsai.jupyter",
+                "tamasfe.even-better-toml",
+                "ms-azuretools.vscode-docker",
+                "charliermarsh.ruff",
+                "mechatroner.rainbow-csv"
+            ],
+            "terminal.integrated.shell.linux": "fish"
+        }
+    },
+    "features": {
+        "ghcr.io/devcontainers-contrib/features/poetry:2": {},
+        "ghcr.io/devcontainers-contrib/features/ruff:1": {},
+        "ghcr.io/meaningful-ooo/devcontainer-features/fish:1": {}
+    },
+    "postCreateCommand": {
+        "install_pure_fish": [
+            "fish",
+            "-c",
+            "fisher install pure-fish/pure"
+        ],
+        "single_line_prompt": [
+            "fish",
+            "-c",
+            "set -U pure_enable_single_line_prompt true"
+        ]
+    }
+}
