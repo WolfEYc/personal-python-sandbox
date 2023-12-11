@@ -4,7 +4,7 @@ version = "0.1.0"
 description = ""
 authors = ["WolfEYc <wolfeycode@gmail.com>"]
 readme = "README.md"
-
+packages = [{ include = "api" }]
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -15,6 +15,7 @@ locust = "^2.19.0"
 adbc-driver-postgresql = "^0.8.0"
 python-dotenv = "^1.0.0"
 pyarrow = "^14.0.1"
+asyncpg = "^0.29.0"
 
 
 [tool.poetry.group.dev.dependencies]
