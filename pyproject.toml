@@ -9,14 +9,14 @@ packages = [{ include = "api" }]
 [tool.poetry.dependencies]
 python = "^3.12"
 requests = "^2.31.0"
-polars = "^0.19.15"
 seaborn = "^0.13.0"
 locust = "^2.19.0"
-adbc-driver-postgresql = "^0.8.0"
 python-dotenv = "^1.0.0"
-pyarrow = "^14.0.1"
 asyncpg = "^0.29.0"
 cachetools = "^5.3.2"
+polars = "^0.20.2"
+adbc-driver-postgresql = "^0.8.0"
+pyarrow = "^14.0.2"
 
 
 [tool.poetry.group.dev.dependencies]
