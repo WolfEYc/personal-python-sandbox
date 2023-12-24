@@ -36,7 +36,7 @@ ITEMS_IN_LIST_QUERY = """--sql
 
 
 @app.get("/lists/{list_id}")
-async def get_list_items(list_id: int):
+async def get_list_items(list_id: int) -> GetListItemsRes:
     lf = await db.fetch_lf(ITEMS_IN_LIST_QUERY, list_id)
     df = lf.collect()
     print(df)
