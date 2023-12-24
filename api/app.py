@@ -14,7 +14,7 @@ async def lifespan(app: FastAPI):
     await db.close()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, debug=True)
 
 
 class Item(BaseModel):
@@ -35,13 +35,13 @@ ITEMS_IN_LIST_QUERY = """--sql
 
 
 @app.get("/lists/{list_id}")
-async def get_list_items(list_id: int, beans: str, bongos: bool):
-    print(beans)
-    print(bongos)
+async def get_list_items(list_id: int):
     lf = await db.fetch_lf(ITEMS_IN_LIST_QUERY, list_id)
-    print(lf.collect())
-    items = lf.collect().to_dicts()
-    return GetListItemsRes.model_validate({"items": items})
+    df = lf.collect()
+    print(df)
+    items = df.to_dicts()
+    data = {"items": items}
+    return GetListItemsRes.model_validate(data)
 
 
 def main():
