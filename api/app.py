@@ -1,7 +1,8 @@
 from contextlib import asynccontextmanager
+from typing import Annotated
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Header
 from pydantic import BaseModel
 
 from api.db import db
@@ -42,6 +43,25 @@ async def get_list_items(list_id: int):
     items = df.to_dicts()
     data = {"items": items}
     return GetListItemsRes.model_validate(data)
+
+
+class FunnyJsonBody(BaseModel):
+    apples: int
+    carrots: int
+    memes: dict[str, str]
+
+
+@app.post("/super-fast")
+async def super_fast(req_body: FunnyJsonBody, X_Token: Annotated[str, Header()]):
+    print(X_Token)
+
+    return {
+        "data": [
+            {"lint": 34, "id": 69, "towers": 2},
+            {"lint": 3434, "id": 907842, "towers": 8},
+            {"lint": None, "id": 3938478937, "towers": 3},
+        ]
+    }
 
 
 def main():
