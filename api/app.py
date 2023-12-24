@@ -35,12 +35,13 @@ ITEMS_IN_LIST_QUERY = """--sql
 
 
 @app.get("/lists/{list_id}")
-async def get_list_items(list_id: int) -> GetListItemsRes:
+async def get_list_items(list_id: int, beans: str, bongos: bool):
+    print(beans)
+    print(bongos)
     lf = await db.fetch_lf(ITEMS_IN_LIST_QUERY, list_id)
     print(lf.collect())
     items = lf.collect().to_dicts()
-    res = GetListItemsRes.model_validate({"items": items})
-    return res
+    return GetListItemsRes.model_validate({"items": items})
 
 
 def main():
