@@ -65,3 +65,7 @@ async def super_fast(req_body: FunnyJsonBody, X_Token: Annotated[str, Header()])
 
 def main():
     uvicorn.run(app)
+
+
+if __name__ == "__main__":
+    main()
