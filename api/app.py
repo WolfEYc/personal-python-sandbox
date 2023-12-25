@@ -35,14 +35,13 @@ ITEMS_IN_LIST_QUERY = """--sql
     """
 
 
-@app.get("/lists/{list_id}")
-async def get_list_items(list_id: int) -> GetListItemsRes:
+@app.get("/lists/{list_id}", response_model=GetListItemsRes)
+async def get_list_items(list_id: int):
     lf = await db.fetch_lf(ITEMS_IN_LIST_QUERY, list_id)
     df = lf.collect()
     print(df)
     items = df.to_dicts()
-    data = {"items": items}
-    return GetListItemsRes.model_validate(data)
+    return {"items": items}
 
 
 class FunnyJsonBody(BaseModel):
