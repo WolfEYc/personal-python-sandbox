@@ -24,7 +24,7 @@ class DB:
     async def fetch_lf(self, query: str, *args, timeout: Optional[int] = None):
         res = await db.pool.fetch(query, *args, timeout=timeout)
         if len(res) == 0:
-            return pl.LazyFrame()
+            return None
         res_values = map(lambda r: list(r.values()), res)
         res_columns = list(res[0].keys())
         lf = pl.LazyFrame(res_values, res_columns)

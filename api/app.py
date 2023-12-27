@@ -35,16 +35,21 @@ ITEMS_IN_LIST_QUERY = """--sql
     """
 
 
+async def get_list_items_helper(list_id: int):
+    lf = await db.fetch_lf(ITEMS_IN_LIST_QUERY, list_id)
+    if lf is None:
+        return []
+    df = lf.collect()
+    return df.to_dicts()
+
+
 @app.get("/lists/{list_id}", response_model=GetListItemsRes)
 async def get_list_items(list_id: int):
-    lf = await db.fetch_lf(ITEMS_IN_LIST_QUERY, list_id)
-    df = lf.collect()
-    print(df)
-    items = df.to_dicts()
+    items = await get_list_items_helper(list_id)
     return {"items": items}
 
 
-class FunnyJsonBody(BaseModel):
+class FunnyJsonBody:
     apples: int
     carrots: int
     memes: dict[str, str]
