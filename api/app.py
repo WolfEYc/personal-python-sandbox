@@ -49,7 +49,7 @@ async def get_list_items(list_id: int):
     return {"items": items}
 
 
-class FunnyJsonBody:
+class FunnyJsonBody(BaseModel):
     apples: int
     carrots: int
     memes: dict[str, str]
