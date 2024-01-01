@@ -36,10 +36,9 @@ ITEMS_IN_LIST_QUERY = """--sql
 
 
 async def get_list_items_helper(list_id: int):
-    lf = await db.fetch_lf(ITEMS_IN_LIST_QUERY, list_id)
-    if lf is None:
+    df = await db.fetch(ITEMS_IN_LIST_QUERY, list_id)
+    if df is None:
         return []
-    df = lf.collect()
     return df.to_dicts()
 
 
