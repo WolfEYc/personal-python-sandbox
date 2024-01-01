@@ -1,4 +1,5 @@
 import os
+from functools import reduce
 from typing import Optional
 
 import asyncpg
@@ -18,11 +19,35 @@ def res_to_df(res):
     return df
 
 
-def get_non_pkey_col_sql(df: pl.DataFrame, pkey_cols: set[str]):
+def get_non_pkey_col_sql(df: pl.DataFrame, pkey_cols: set[str], table_name: str):
     non_key_cols = set(df.columns).difference(pkey_cols)
     non_key_cols_sqls = map(lambda x: f"{x} = EXCLUDED.{x}", non_key_cols)
     non_key_cols_sql = ", ".join(non_key_cols_sqls)
-    return non_key_cols_sql
+    where_conditions_sqls = map(
+        lambda x: f"{table_name}.{x} != EXCLUDED.{x}", non_key_cols
+    )
+    where_condition_sql = " OR ".join(where_conditions_sqls)
+    upsert_sql = f"{non_key_cols_sql} WHERE {where_condition_sql}"
+    return upsert_sql
+
+
+POLARS_TO_POSTGRES_TYPE_MAP = {
+    str(pl.Object): "TEXT",
+    str(pl.Boolean): "BOOLEAN",
+    str(pl.UInt8): "SMALLINT",
+    str(pl.UInt16): "SMALLINT",
+    str(pl.UInt32): "INT",
+    str(pl.UInt64): "BIGINT",
+    str(pl.Int8): "SMALLINT",
+    str(pl.Int16): "SMALLINT",
+    str(pl.Int32): "INT",
+    str(pl.Int64): "BIGINT",
+    str(pl.Float32): "REAL",
+    str(pl.Float64): "DOUBLE PRECISION",
+    str(pl.Date): "DATE",
+    str(pl.Datetime): "TIMESTAMP",
+    str(pl.Utf8): "TEXT",
+}
 
 
 class DB:
@@ -37,8 +62,80 @@ class DB:
     async def close(self):
         await self.pool.close()
 
-    async def fetch(self, query: str, *args, timeout: Optional[int] = None):
-        res = await self.pool.fetch(query, *args, timeout=timeout)
+    async def fetch(self, query: str, timeout=None, **kwargs):
+        """Used to fetch data from the database into a dataframe.
+        \nKeyword arguments are used for query arguments using :query_param syntax.
+
+        Args:
+            query (str): SQL query to execute
+            timeout (Optional[int], optional): timeout to give up in seconds. Defaults to None.
+
+        Returns:
+            (Dataframe | None): returns a dataframe if there are results, otherwise None
+
+        Examples:
+            >>> await db.fetch("SELECT * FROM item WHERE id = :id", id=83473)
+            shape: (1, 3)
+            ┌────────┬─────────┬──────────────┐
+            │ id     ┆ name    ┆ price        │
+            │ ---    ┆ ---     ┆ ---          │
+            │ i64    ┆ str     ┆ decimal[*,2] │
+            ╞════════╪═════════╪══════════════╡
+            │ 83473  ┆ pumpkin ┆ 12.99        │
+            └────────┴─────────┴──────────────┘
+            >>> await db.fetch(
+                    "SELECT * FROM item WHERE id = ANY(:ids) ORDER BY price LIMIT 10",
+                    ids=[83473, 348374],
+                )
+            shape: (2, 3)
+            ┌────────┬─────────┬──────────────┐
+            │ id     ┆ name    ┆ price        │
+            │ ---    ┆ ---     ┆ ---          │
+            │ i64    ┆ str     ┆ decimal[*,2] │
+            ╞════════╪═════════╪══════════════╡
+            │ 348374 ┆ yogurt  ┆ 3.99         │
+            │ 83473  ┆ pumpkin ┆ 12.99        │
+            └────────┴─────────┴──────────────┘
+            >>> ids = pl.Series("id", [83473, 348374])
+            >>> names = pl.Series("name", ["onion", "bbq", "beans"])
+            >>> attr_dict = {"ids": ids, "names": names}
+            >>> query = \"\"\"--sql
+                SELECT *
+                FROM item
+                WHERE
+                    id = ANY(:ids) OR
+                    name = ANY(:names)
+                ORDER BY price
+                LIMIT 10
+                \"\"\"
+
+            >>> await db.fetch(
+                    query,
+                    **attr_dict,
+                )
+            shape: (5, 3)
+            ┌─────────┬─────────┬──────────────┐
+            │ id      ┆ name    ┆ price        │
+            │ ---     ┆ ---     ┆ ---          │
+            │ i64     ┆ str     ┆ decimal[*,2] │
+            ╞═════════╪═════════╪══════════════╡
+            │ 1965488 ┆ onion   ┆ 2.99         │
+            │ 348374  ┆ yogurt  ┆ 3.99         │
+            │ 1870644 ┆ bbq     ┆ 6.99         │
+            │ 83473   ┆ pumpkin ┆ 12.99        │
+            │ 6334    ┆ beans   ┆ 69.99        │
+            └─────────┴─────────┴──────────────┘
+        """
+
+        numbered_args_query = reduce(
+            lambda acc, x: acc.replace(f":{x[1]}", f"${x[0]}"),
+            enumerate(kwargs.keys(), 1),
+            query,
+        )
+
+        res = await self.pool.fetch(
+            numbered_args_query, *kwargs.values(), timeout=timeout
+        )
         return res_to_df(res)
 
     async def insert(
@@ -46,6 +143,7 @@ class DB:
         df: pl.DataFrame,
         table_name: str,
         pkey_cols: Optional[set[str]] = None,
+        return_cols: Optional[set[str]] = None,
         timeout: Optional[float] = None,
     ):
         """Used to insert a dataframe into a table, optionally upserting on pkey_cols
@@ -58,23 +156,31 @@ class DB:
         """
         cols_sql = ", ".join(df.columns)
         placeholder_fillers = ", ".join(
-            map(lambda x: f"${x + 1}", range(len(df.columns)))
+            map(
+                lambda x: f"${x[0] + 1}::{POLARS_TO_POSTGRES_TYPE_MAP[str(x[1][1])]}[]",
+                enumerate(df.schema.items()),
+            )
         )
 
         conflict_resolution = (
-            f"ON CONFLICT ({', '.join(pkey_cols)}) DO UPDATE SET {get_non_pkey_col_sql(df, pkey_cols)}"
+            f"ON CONFLICT ({', '.join(pkey_cols)}) DO UPDATE SET {get_non_pkey_col_sql(df, pkey_cols, table_name)}"
             if pkey_cols
             else "ON CONFLICT DO NOTHING"
         )
 
-        query = f"INSERT INTO {table_name} ({cols_sql}) VALUES ({placeholder_fillers}) {conflict_resolution}"
+        return_cols_sql = f"RETURNING {", ".join(return_cols)}" if return_cols else ""
 
-        data = df.rows()
-        await self.pool.executemany(
+        query = f"INSERT INTO {table_name} ({cols_sql}) SELECT * FROM UNNEST({placeholder_fillers}) {conflict_resolution} {return_cols_sql}"
+        data = df.get_columns()
+
+        res = await self.pool.fetch(
             query,
-            data,
+            *data,
             timeout=timeout,  # type: ignore
         )
+
+        res_df = res_to_df(res)
+        return res_df
 
     async def delete(self):
         pass
