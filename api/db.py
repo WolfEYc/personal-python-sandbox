@@ -31,6 +31,14 @@ def get_non_pkey_col_sql(df: pl.DataFrame, pkey_cols: set[str], table_name: str)
     return upsert_sql
 
 
+def kwargs_to_sql(query, **kwargs):
+    return reduce(
+        lambda acc, x: acc.replace(f":{x[1]}", f"${x[0]}"),
+        enumerate(kwargs.keys(), 1),
+        query,
+    )
+
+
 POLARS_TO_POSTGRES_TYPE_MAP = {
     str(pl.Object): "TEXT",
     str(pl.Boolean): "BOOLEAN",
@@ -127,11 +135,7 @@ class DB:
             └─────────┴─────────┴──────────────┘
         """
 
-        numbered_args_query = reduce(
-            lambda acc, x: acc.replace(f":{x[1]}", f"${x[0]}"),
-            enumerate(kwargs.keys(), 1),
-            query,
-        )
+        numbered_args_query = kwargs_to_sql(query, **kwargs)
 
         res = await self.pool.fetch(
             numbered_args_query, *kwargs.values(), timeout=timeout
@@ -153,6 +157,67 @@ class DB:
             table_name (str): table to insert into
             pkey_cols (Optional[set[str]], optional): if arbitrary pkeys are specified, will be used to attempt upsert operation. Defaults to None.
             timeout (Optional[float], optional): timeout for db connection. Defaults to None.
+        Returns:
+            (pl.DataFrame | None): returns a dataframe if there are results, otherwise None
+
+        >>> await db.fetch("SELECT * FROM item")
+        shape: (11, 3)
+        ┌──────────┬───────────┬──────────────┐
+        │ id       ┆ name      ┆ price        │
+        │ ---      ┆ ---       ┆ ---          │
+        │ i64      ┆ str       ┆ decimal[*,2] │
+        ╞══════════╪═══════════╪══════════════╡
+        │ 394789   ┆ beanie    ┆ 16.89        │
+        │ 1965488  ┆ onion     ┆ 2.99         │
+        │ 1870644  ┆ bbq       ┆ 6.99         │
+        │ 69420    ┆ condoms   ┆ 69.42        │
+        │ …        ┆ …         ┆ …            │
+        │ 22334    ┆ poop      ┆ 100.99       │
+        │ 348374   ┆ yogurt    ┆ 3.99         │
+        │ 98333829 ┆ chocolate ┆ 4.99         │
+        │ 83473    ┆ pumpkin   ┆ 12.99        │
+        └──────────┴───────────┴──────────────┘
+        >>> items_to_insert = pl.DataFrame(
+                {
+                    "id": [394789, 3483, 39],
+                    "name": ["beanie", "foo", "bar"],
+                    "price": [12.66, 10.0, 20.0],
+                }
+            )
+
+        Note: beanie already exists, but the price is different
+
+        >>> await db.insert(items_to_insert, "item", return_cols={"id"})
+        shape: (2, 1)
+        ┌──────┐
+        │ id   │
+        │ ---  │
+        │ i64  │
+        ╞══════╡
+        │ 3483 │
+        │ 39   │
+        └──────┘
+
+        Note: beanie was not inserted, since it already exists, which is the default action
+
+        I am now going to add id to the pkey_cols,
+        so that we can upsert on the constraint column
+        >>> await db.insert(
+                items_to_insert,
+                "item",
+                pkey_cols={"id"},
+                return_cols={"id"}
+            )
+        shape: (1, 1)
+        ┌────────┐
+        │ id     │
+        │ ---    │
+        │ i64    │
+        ╞════════╡
+        │ 394789 │
+        └────────┘
+
+        Note: The price of beanie is now updated, and is the only row returned since it is the only row that was updated
         """
         cols_sql = ", ".join(df.columns)
         placeholder_fillers = ", ".join(
@@ -181,9 +246,6 @@ class DB:
 
         res_df = res_to_df(res)
         return res_df
-
-    async def delete(self):
-        pass
 
 
 db = DB()
