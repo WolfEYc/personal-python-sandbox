@@ -31,7 +31,7 @@ def get_non_pkey_col_sql(df: pl.DataFrame, pkey_cols: set[str], table_name: str)
     return upsert_sql
 
 
-def kwargs_to_sql(query, **kwargs):
+def kwargs_to_sql(query: str, **kwargs):
     return reduce(
         lambda acc, x: acc.replace(f":{x[1]}", f"${x[0]}"),
         enumerate(kwargs.keys(), 1),
@@ -256,10 +256,11 @@ class DB:
         beanie is the only row returned since it is the only row that was updated.
         """
         cols_sql = ", ".join(df.columns)
+
         placeholder_fillers = ", ".join(
             map(
-                lambda x: f"${x[0] + 1}::{POLARS_TO_POSTGRES_TYPE_MAP[str(x[1][1])]}[]",
-                enumerate(df.schema.items()),
+                lambda x: f"${x[0]}::{POLARS_TO_POSTGRES_TYPE_MAP[str(x[1][1])]}[]",
+                enumerate(df.schema.items(), 1),
             )
         )
 
