@@ -1,4 +1,5 @@
 import os
+from abc import ABC, abstractmethod
 from functools import reduce
 from typing import Optional
 
@@ -58,19 +59,9 @@ POLARS_TO_POSTGRES_TYPE_MAP = {
 }
 
 
-class DB:
-    pool: asyncpg.Pool
-
-    async def init(self):
-        pool = await asyncpg.create_pool(DATABASE_URL)
-        if pool is None:
-            raise ValueError("Could not create connection pool")
-        self.pool = pool
-
-    async def close(self):
-        await self.pool.close()
-
-    async def fetch(self, query: str, timeout=None, **kwargs):
+class DB(ABC):
+    @abstractmethod
+    async def fetch(self, query: str, timeout=None, **kwargs) -> Optional[pl.DataFrame]:
         """
         Used to fetch data from the database into a dataframe.
         Keyword arguments are used for query arguments using :query_param syntax.
@@ -160,14 +151,9 @@ class DB:
         │ 394789 │
         └────────┘
         """
+        ...
 
-        numbered_args_query = kwargs_to_sql(query, **kwargs)
-
-        res = await self.pool.fetch(
-            numbered_args_query, *kwargs.values(), timeout=timeout
-        )
-        return res_to_df(res)
-
+    @abstractmethod
     async def insert(
         self,
         df: pl.DataFrame,
@@ -175,7 +161,7 @@ class DB:
         pkey_cols: Optional[set[str]] = None,
         return_cols: Optional[set[str]] = None,
         timeout: Optional[float] = None,
-    ):
+    ) -> Optional[pl.DataFrame]:
         """
         Used to insert a dataframe into a table, optionally upserting on pkey_cols
 
@@ -255,6 +241,31 @@ class DB:
         Note: The price of beanie is now updated.\n
         beanie is the only row returned since it is the only row that was updated.
         """
+        ...
+
+
+class PGDB(DB):
+    pool: asyncpg.Pool
+
+    def init(self, pool: asyncpg.Pool):
+        self.pool = pool
+
+    async def fetch(self, query: str, timeout=None, **kwargs):
+        numbered_args_query = kwargs_to_sql(query, **kwargs)
+
+        res = await self.pool.fetch(
+            numbered_args_query, *kwargs.values(), timeout=timeout
+        )
+        return res_to_df(res)
+
+    async def insert(
+        self,
+        df: pl.DataFrame,
+        table_name: str,
+        pkey_cols: Optional[set[str]] = None,
+        return_cols: Optional[set[str]] = None,
+        timeout: Optional[float] = None,
+    ):
         cols_sql = ", ".join(df.columns)
 
         placeholder_fillers = ", ".join(
@@ -285,4 +296,15 @@ class DB:
         return res_df
 
 
-db = DB()
+db = PGDB()
+
+
+async def init():
+    pool = await asyncpg.create_pool(DATABASE_URL)
+    if pool is None:
+        raise Exception("Could not connect to database")
+    db.init(pool)
+
+
+async def close():
+    await db.pool.close()

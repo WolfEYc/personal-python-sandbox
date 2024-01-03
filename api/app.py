@@ -5,14 +5,14 @@ import uvicorn
 from fastapi import FastAPI, Header
 from pydantic import BaseModel
 
-from api.db import db
+from api.db import close, db, init
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await db.init()
+    await init()
     yield
-    await db.close()
+    await close()
 
 
 app = FastAPI(lifespan=lifespan, debug=True)
