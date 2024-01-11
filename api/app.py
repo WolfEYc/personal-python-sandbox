@@ -5,14 +5,14 @@ import uvicorn
 from fastapi import FastAPI, Header
 from pydantic import BaseModel
 
-from api.db import db
+from api.db import close, db, init
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await db.init()
+    await init()
     yield
-    await db.close()
+    await close()
 
 
 app = FastAPI(lifespan=lifespan, debug=True)
@@ -36,10 +36,9 @@ ITEMS_IN_LIST_QUERY = """--sql
 
 
 async def get_list_items_helper(list_id: int):
-    lf = await db.fetch_lf(ITEMS_IN_LIST_QUERY, list_id)
-    if lf is None:
+    df = await db.fetch(ITEMS_IN_LIST_QUERY, list_id)
+    if df is None:
         return []
-    df = lf.collect()
     return df.to_dicts()
 
 
