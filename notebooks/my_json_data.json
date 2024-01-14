@@ -1,0 +1,58 @@
+{
+    "bingos": [
+        {
+            "id": 6969,
+            "wins": 12,
+            "losses": 9,
+            "happyness": 0.8,
+            "chart_name": "super_bingo"
+        },
+        {
+            "id": 69420,
+            "wins": 34,
+            "losses": 93,
+            "happyness": 0.039,
+            "chart_name": "loser_bingo"
+        },
+        {
+            "id": 1234,
+            "wins": 123,
+            "losses": 0,
+            "happyness": 1,
+            "chart_name": "cheater_bingo"
+        },
+        {
+            "id": 420420,
+            "wins": 1343,
+            "losses": 99393,
+            "happyness": 0.3,
+            "chart_name": "addict_bingo"
+        }
+    ],
+    "bongos": [
+        {
+            "bingo_ids": [
+                6969,
+                420420
+            ],
+            "owner_name": "isaac",
+            "owner_id": 837483,
+            "weight": 3948,
+            "length": 384,
+            "width": 3483.34,
+            "depth": 9893.38
+        },
+        {
+            "bingo_ids": [
+                1234,
+                69420
+            ],
+            "owner_name": "joe",
+            "owner_id": 3748743,
+            "weight": 34,
+            "length": 384.234,
+            "width": 3483,
+            "depth": 8377.38
+        }
+    ]
+}
