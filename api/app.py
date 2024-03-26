@@ -31,12 +31,12 @@ ITEMS_IN_LIST_QUERY = """--sql
     SELECT i.name, li.quantity
     FROM item_in_list AS li
     JOIN item i ON li.item_id = i.id
-    WHERE li.list_id = $1
+    WHERE li.list_id = :list_id
     """
 
 
 async def get_list_items_helper(list_id: int):
-    df = await db.fetch(ITEMS_IN_LIST_QUERY, list_id)
+    df = await db.fetch(ITEMS_IN_LIST_QUERY, list_id=list_id)
     if df is None:
         return []
     return df.to_dicts()
