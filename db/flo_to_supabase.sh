@@ -1,0 +1,2 @@
+# remember to substitute the passwords
+docker run postgres:15.6 pg_dump postgres://fl0user:[FL0_POSTGRES_PASSWORD]@ep-purple-union-28479376.us-east-2.aws.neon.fl0.io:5432/tag?sslmode=require | psql postgres://postgres.zgrwyooxarbzhotcramx:[SUPABASE_POSTGRES_PASSWORD]@aws-0-us-east-1.pooler.supabase.com:5432/postgres
