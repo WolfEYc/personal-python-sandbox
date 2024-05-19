@@ -7,15 +7,16 @@ from dotenv import load_dotenv
 load_dotenv()
 DATABASE_URL = os.environ["DATABASE_URL"]
 
-db = PGDB()
-
 
 async def init():
     pool = await asyncpg.create_pool(DATABASE_URL)
     if pool is None:
         raise Exception("Could not connect to database")
-    db.init(pool)
+    return pool
 
 
 async def close():
-    await db.pool.close()
+    await DB.close()
+
+
+DB = PGDB(init)

@@ -5,7 +5,7 @@ import uvicorn
 from fastapi import FastAPI, Header
 from pydantic import BaseModel
 
-from api.db import close, db, init
+from api.db import DB, close, init
 
 
 @asynccontextmanager
@@ -36,7 +36,7 @@ ITEMS_IN_LIST_QUERY = """--sql
 
 
 async def get_list_items_helper(list_id: int):
-    df = await db.fetch(ITEMS_IN_LIST_QUERY, list_id=list_id)
+    df = await DB.fetch(ITEMS_IN_LIST_QUERY, list_id=list_id)
     if df is None:
         return []
     return df.to_dicts()

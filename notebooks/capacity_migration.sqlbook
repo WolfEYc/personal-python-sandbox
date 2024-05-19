@@ -1,0 +1,39 @@
+-- SQLBook: Code
+-- Active: 1716149171831@@127.0.0.1@5432@postgres
+SELECT
+    *
+FROM
+    tank.tank_metadata
+ORDER BY
+    scadaid;
+-- SQLBook: Code
+SELECT
+    DISTINCT source_key
+FROM
+    sdm_dba.data_catalog
+WHERE
+    metric_nice_name ~ 'Tank[0-9]+Capacity'
+-- SQLBook: Code
+WITH capacity_scadas AS (
+    SELECT
+        DISTINCT source_key
+    FROM
+        sdm_dba.data_catalog
+    WHERE
+        metric_nice_name ~ 'Tank[0-9]+Capacity'
+)
+SELECT
+    *
+FROM
+    sdm_dba.data_catalog
+WHERE
+    metric_nice_name ~ 'Tank[0-9]+Level'
+    AND source_key NOT IN(
+        SELECT
+            source_key
+        FROM
+            capacity_scadas
+    );
+-- SQLBook: Code
+DELETE FROM
+    tank.tank_metadata;
